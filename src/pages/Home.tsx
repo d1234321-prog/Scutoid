@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
 import { Logo } from '../components/Logo';
 import { 
   Menu, X, LineChart, Briefcase, Handshake, Building2, 
@@ -11,6 +12,10 @@ import {
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -589,53 +594,119 @@ export default function Home() {
                 <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-scutoid-red/5 rounded-full blur-2xl"></div>
                 <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 bg-scutoid-blue/5 rounded-full blur-2xl"></div>
 
-                <form className="relative z-10" action="mailto:development@scutoid.us" method="POST" encType="text/plain">
-                  <div className="space-y-6">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">Nombre Completo</label>
-                      <input 
-                        type="text" 
-                        id="name" 
-                        name="name"
-                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all bg-white"
-                        placeholder="Ingresa tu nombre"
-                        required
-                      />
+                {isSubmitted ? (
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full min-h-[300px] text-center">
+                    <div className="w-16 h-16 bg-blue-50 text-scutoid-blue rounded-full flex items-center justify-center mb-6">
+                      <CheckCircle2 size={32} />
                     </div>
-                    
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Correo Electrónico</label>
-                      <input 
-                        type="email" 
-                        id="email" 
-                        name="email"
-                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all bg-white"
-                        placeholder="tu@email.com"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">Mensaje</label>
-                      <textarea 
-                        id="message" 
-                        name="message"
-                        rows={4}
-                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all resize-none bg-white"
-                        placeholder="¿En qué podemos ayudarte?"
-                        required
-                      ></textarea>
-                    </div>
-
+                    <h3 className="text-2xl font-bold font-display text-slate-900 mb-2">¡Gracias por contactarnos!</h3>
+                    <p className="text-slate-600 mb-8 max-w-sm">
+                      Tu mensaje ha sido enviado exitosamente. Nos pondremos en contacto contigo a la brevedad.
+                    </p>
                     <button 
-                      type="submit" 
-                      className="w-full bg-scutoid-blue hover:bg-blue-800 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      onClick={() => setIsSubmitted(false)}
+                      className="text-scutoid-blue font-medium hover:text-blue-800 transition-colors"
                     >
-                      Enviar Mensaje
-                      <Send size={18} />
+                      Enviar otro mensaje
                     </button>
                   </div>
-                </form>
+                ) : (
+                  <form 
+                    ref={formRef}
+                    className="relative z-10" 
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!formRef.current) return;
+                      
+                      setIsSubmitting(true);
+                      setSubmitError('');
+                      
+                      try {
+                        const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+                        const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+                        const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+                        
+                        // Si no están configuradas las variables, usamos mailto como fallback para DEV o simulación
+                        if (!serviceId || !templateId || !publicKey) {
+                          console.warn('EmailJS no está configurado. Configura las variables de entorno VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID y VITE_EMAILJS_PUBLIC_KEY. Usando fallback local para esta demostración.');
+                          
+                          // Simulación de envío de 1 segundo
+                          setTimeout(() => {
+                            setIsSubmitting(false);
+                            setIsSubmitted(true);
+                          }, 1000);
+                          return;
+                        }
+
+                        await emailjs.sendForm(
+                          serviceId,
+                          templateId,
+                          formRef.current,
+                          { publicKey }
+                        );
+                        
+                        setIsSubmitted(true);
+                      } catch (error) {
+                        console.error('Error al enviar el email:', error);
+                        setSubmitError('Hubo un error al enviar el mensaje. Por favor, inténtalo de nuevo.');
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    <div className="space-y-6">
+                      {submitError && (
+                        <div className="p-3 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm">
+                          {submitError}
+                        </div>
+                      )}
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">Nombre Completo</label>
+                        <input 
+                          type="text" 
+                          id="name" 
+                          name="name"
+                          className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all bg-white"
+                          placeholder="Ingresa tu nombre"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Correo Electrónico</label>
+                        <input 
+                          type="email" 
+                          id="email" 
+                          name="email"
+                          className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all bg-white"
+                          placeholder="tu@email.com"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">Mensaje</label>
+                        <textarea 
+                          id="message" 
+                          name="message"
+                          rows={4}
+                          className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-scutoid-blue focus:ring-2 focus:ring-scutoid-blue/20 outline-none transition-all resize-none bg-white"
+                          placeholder="¿En qué podemos ayudarte?"
+                          required
+                        ></textarea>
+                      </div>
+
+                      <button 
+                        type="submit" 
+                        disabled={isSubmitting}
+                        className={`w-full bg-scutoid-blue hover:bg-blue-800 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      >
+                        {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
+                        {!isSubmitting && <Send size={18} />}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </div>
