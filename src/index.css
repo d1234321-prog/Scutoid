@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Montserrat", "Inter", ui-sans-serif, system-ui;
+  
+  --color-scutoid-blue: #1663a6;
+  --color-scutoid-red: #da291c;
+  --color-scutoid-dark: #1e293b;
+  --color-scutoid-light: #f8fafc;
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply text-slate-700 bg-white antialiased font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-medium tracking-tight text-slate-900;
+  }
+}
+
